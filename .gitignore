@@ -1,0 +1,39 @@
+# 课程与项目通用忽略（开始时即可用，后续项目按需补充）
+
+# Go
+bin/
+*.exe
+*.test
+*.out
+coverage.out
+pprof*.prof
+
+# Node / 前端
+node_modules/
+dist/
+build/
+.vite/
+*.local
+
+# 环境变量与密钥（绝不提交私钥/助记词/RPC key）
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.keystore
+
+# Solidity / Foundry
+out/
+cache/
+broadcast/
+
+# Solana / Anchor
+target/
+.idl/
+
+# 系统与编辑器
+.DS_Store
+*.log
+.idea/
+.vscode/
