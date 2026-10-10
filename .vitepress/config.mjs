@@ -8,7 +8,7 @@ export default defineConfig({
   base: '/web3-course/',
   srcDir: '.',
   cleanUrls: true,
-  srcExclude: ['node_modules/**', '.git/**', '.github/**', '.vitepress/**', '.idea/**', 'QA/**'],
+  srcExclude: ['node_modules/**', '.git/**', '.github/**', '.vitepress/**', '.idea/**', 'QA/**', 'CLAUDE.md'],
   lastUpdated: { text: '更新于' },
 
   themeConfig: {
