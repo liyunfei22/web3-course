@@ -48,7 +48,7 @@ trait Withdraw { fn take(&mut self, amount: u64) -> Result<(), String>; }
 
 ## D2：Anchor 核心（2 天，book.anchor-lang.com 导航）
 
-**Anchor 是什么**：Solana 原生 SDK 需要手工做反序列化、权限校验、签名检查，样板代码极多；Anchor 用宏把样板压缩成 **#[program]（逻辑） + #[derive(Accounts)]（账户校验声明）+ Context<T>（把声明与逻辑接起来）** 三段式。Anchor 不是语言，是 Solana 的框架（类比：React 之于 JS）。
+**Anchor 是什么**：Solana 原生 SDK 需要手工做反序列化、权限校验、签名检查，样板代码极多；Anchor 用宏把样板压缩成 **#[program]（逻辑） + #[derive(Accounts)]（账户校验声明）+ `Context<T>`（把声明与逻辑接起来）** 三段式。Anchor 不是语言，是 Solana 的框架（类比：React 之于 JS）。
 
 **账户模型与租金**：每个账户有 `{ lamports, data, owner, executable, rent_epoch }`。程序能读写 owner 是自己的账户；普通用户账户 owner 是 System Program。锚点默认要求目标账户 rent-exempt（内存换交易费，测试网无感知）。
 

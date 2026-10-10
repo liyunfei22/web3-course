@@ -149,7 +149,7 @@ func (l *Ledger) Balance(userID, asset string) (available, frozen, total int64, 
 
 **直觉**：单式记账好比只记「花了 100」；复式记账强迫你同时记「钱从哪来、去哪了」。任何一笔业务事件都写成 ≥2 条分录，Σdebit == Σcredit 永远成立。**为什么资金系统必须复式**：任何程序员 bug、恶意篡改、并发错序，都会打破借贷平衡——对账任务会发现，而不是无声地错。单式记账的错误是沉默的。
 
-**参考实现要点**：科目（account）设计为三元组 `(userID, asset, bucket)`，bucket ∈ {available, frozen}；每条流水 `journal(id, ts, debitAccount, creditAccount, qty, ref, idemKey)`；同一事务内写流水 + 更新余额（余额可冗余存储，以流水为准）。**先冻结后成交**是纪律：撤单 = 原冻结分录反向；成交 = 冻结减少 + 对手方反映。
+**参考实现要点**：科目（account）设计为三元组 `(userID, asset, bucket)`，bucket ∈ `{available, frozen}`；每条流水 `journal(id, ts, debitAccount, creditAccount, qty, ref, idemKey)`；同一事务内写流水 + 更新余额（余额可冗余存储，以流水为准）。**先冻结后成交**是纪律：撤单 = 原冻结分录反向；成交 = 冻结减少 + 对手方反映。
 
 **测试期望**：任何业务事件序列后 Σdebit == Σcredit（全局校验脚本）；**单笔**事务要么全成要么全不成（转账中途失败不得留下半笔）。
 

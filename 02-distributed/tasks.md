@@ -107,7 +107,7 @@
 - **输出物**：仓库 `seed-exchange-api/`：
   1. 装配顺序：router → recover → request_id → access log → JWT 验签（HS256）→ 令牌桶限流 → 幂等中间件 → handler；
   2. order Schema：orders 表（symbol/side/type/price/qty/client_order_id/status/created_at/updated_at），唯一约束 (user_id, client_order_id)；
-  3. REST：POST /api/v1/orders（201 + orderId）、GET /api/v1/orders/{id}；
+  3. REST：POST /api/v1/orders（201 + orderId）、GET /api/v1/orders/`{id}`；
   4. Kafka 写出：下单成功 → orders topic（Key = orderId），附最小消费者 + 去重表验证幂等消费；
   5. 测试：中间件单测 + handler 全链路测试 + `go test -cover ./...` ≥ 80%（截图存 README）；
   6. 装配：`../scaffolds/docker-compose.md` 起环境、`../scaffolds/ci-github-actions.md` 建 CI（全绿截图）、`../scaffolds/k6-load-test.md` 跑一次冒烟压测（报告表填入数字）；

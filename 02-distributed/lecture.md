@@ -284,7 +284,7 @@ proto3：message 字段 = 名字 + 类型 + 编号；编号 1-15 用 1 字节（
 
 - 装配：路由 + 中间件链 recover → request_id → access log → JWT 验签 → 限流 → 幂等 → 业务；
 - order Schema：orders 表（symbol / side / type / price / qty / client_order_id / status / created_at / updated_at），唯一约束 (user_id, client_order_id)；
-- REST：POST /api/v1/orders、GET /api/v1/orders/{id}；
+- REST：POST /api/v1/orders、GET /api/v1/orders/`{id}`；
 - Kafka 写出：下单成功 → orders topic，Key = orderId；附最小消费者 + 去重表验证「幂等消费」（roadmap 阶段要点原话）；
 - 测试：各中间件单测 + handler 全链路测试 + `go test -cover` ≥ 80%；
 - 装配件：`../scaffolds/docker-compose.md`、`../scaffolds/ci-github-actions.md`、`../scaffolds/k6-load-test.md`；README 含架构图（Mermaid）/ 快速开始 / 验收勾选表。

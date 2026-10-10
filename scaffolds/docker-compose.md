@@ -142,7 +142,7 @@ docker compose down -v       # 停并删除数据卷（相当于格式化；慎�
 | 现象 | 根因 | 解法 |
 |---|---|---|
 | 端口被占：`docker compose up` 报 bind 失败 / address already in use | 本机已有服务占用 3306/6379/9092 | `lsof -nP -iTCP:3306 -sTCP:LISTEN` 找到占用进程；改 `.env` 里对应端口重新 `up -d`，客户端连接串同步改 |
-| 容器反复重启 / `docker compose ps` 里 Restarting | 启动命令失败或内存超限被 OOM 杀 | `docker compose logs <svc>` 看最后 20 行；`docker inspect ex-kafka --format '{{.State.OOMKilled}}'` 为 true 则是内存上限太小，调大 deploy.resources.limits.memory 后 `up -d` |
+| 容器反复重启 / `docker compose ps` 里 Restarting | 启动命令失败或内存超限被 OOM 杀 | `docker compose logs <svc>` 看最后 20 行；`docker inspect ex-kafka | jq '.[0].State.OOMKilled'` 为 true 则是内存上限太小，调大 deploy.resources.limits.memory 后 `up -d` |
 | Kafka 容器 healthy 但 Go 客户端报 `connection refused` | advertised.listeners 只广播 localhost:9092，客户端用的 host:port 与它不一致 | 客户端在宿主机 → 用 `localhost:9092`；客户端在另一个容器里 → 需要在 compose 里给 kafka 增加内部 listener（`KAFKA_LISTENERS` 加 `PLAINTEXT://0.0.0.0:19092` 并 `KAFKA_ADVERTISED_LISTENERS` 同时含 `PLAINTEXT://kafka:19092`），且 app 容器与 kafka 同网络 |
 | 客户端 `connection refused` 但 Kafka 日志正常 | 服务还没就绪（健康检查未绿）就连接 | `docker compose ps` 等 kafka 显示 healthy 再连；写连接重试（kafka-go 默认会重试） |
 | 客户端报 `Cluster ID 不匹配` / 启动日志报 cluster id 校验失败 | 数据卷里的集群 ID 与 CLUSTER_ID 环境变量不一致（换了机器或改过 compose） | `docker compose down -v` 清掉 kafka_data 卷后重新 `up -d` |

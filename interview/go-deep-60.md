@@ -81,7 +81,7 @@
 ### B5. 逃逸分析：什么情况对象会被分到堆上？
 
 - 答案要点：编译器分析「对象会不会逃出函数作用域」：返回指针、闭包捕获、interface 动态分派（可能要存储到堆）、大量 concat、append 到外传 slice、大对象（>64KB 直接堆）。查看方式：go build -gcflags=-m（-m 层数越多输出越细）。栈上对象零 GC 成本 → 逃逸越少越好（热路径尤其）。
-- 面试官追问：fmt.Sprintf 为什么「为了不逃逸」有时改用 strconv.AppendInt？——fmt 走 interface{} 参数，参数装箱必逃逸；strconv 直写 []byte 无装箱，热路径省一次堆分配。
+- 面试官追问：fmt.Sprintf 为什么「为了不逃逸」有时改用 strconv.AppendInt？——fmt 走 interface`{}` 参数，参数装箱必逃逸；strconv 直写 []byte 无装箱，热路径省一次堆分配。
 
 ### B6. STW 在 Go GC 里还有几次？量级多少？
 
@@ -174,17 +174,17 @@
 
 ### D7. 陷阱题：for-select 里接收一个会被关闭的 channel，为什么可能死循环？
 
-- 答案要点：channel 关闭后接收立即返回零值且 ok=false；不加 ok 判断的 for-select 会以零值业务逻辑无限循环（如计数 0 当作正常消息处理）。修复：value, ok := <-ch; if !ok { return } 或用 range 语义。这是「关闭意图被当数据」的经典面试陷阱。
+- 答案要点：channel 关闭后接收立即返回零值且 ok=false；不加 ok 判断的 for-select 会以零值业务逻辑无限循环（如计数 0 当作正常消息处理）。修复：value, ok := <-ch; if !ok `{ return }` 或用 range 语义。这是「关闭意图被当数据」的经典面试陷阱。
 - 面试官追问：怎么用 select 同时监听「数据」与「退出」双路？——case v, ok := <-dataCh（ok=false 时置 nil 并 return）；case <-ctx.Done()：select 双路 + nil 禁用，是优雅退出标准结构（D8/D10 复用）。
 
 ### D8. 超时实现：select + time.After 的泄漏问题怎么解？
 
-- 答案要点：time.After 每次分配一个 Timer，若对应的 case 没触发（走了别的分支），Timer 要到 GC 才有机会释放；高频循环里会堆积。正确写法：timer := time.NewTimer(d); defer timer.Stop(); select { case <-timer.C: ... case <-ctx.Done(): ... }——Stop 后可回收。更推荐统一用 context.WithTimeout 贯穿（D8 与 E3 呼应）。
-- 面试官追问：timer.Stop() 之后 channel 里可能还有残留值吗？——可能（Stop 返回 false 表示 timer 已在触发竞态），严谨代码再加一个非阻塞 drain（select{case <-timer.C: default:}）。
+- 答案要点：time.After 每次分配一个 Timer，若对应的 case 没触发（走了别的分支），Timer 要到 GC 才有机会释放；高频循环里会堆积。正确写法：timer := time.NewTimer(d); defer timer.Stop(); select `{ case <-timer.C: ... case <-ctx.Done(): ... }`——Stop 后可回收。更推荐统一用 context.WithTimeout 贯穿（D8 与 E3 呼应）。
+- 面试官追问：timer.Stop() 之后 channel 里可能还有残留值吗？——可能（Stop 返回 false 表示 timer 已在触发竞态），严谨代码再加一个非阻塞 drain（select`{case <-timer.C: default:}`）。
 
-### D9. 为什么「信号」用 chan struct{} 而非 chan bool 或 chan int？
+### D9. 为什么「信号」用 chan struct`{}` 而非 chan bool 或 chan int？
 
-- 答案要点：struct{} 零大小（空结构体），Channel 内的元素不占字节；语义清晰：信号 = 事件发生，无负载；配合 close(done) 广播语义（所有接收者同时收到）比「发 N 个值」省。bool 让人觉得「要读值」，容易误写成「读 false 当作没信号」。
+- 答案要点：struct`{}` 零大小（空结构体），Channel 内的元素不占字节；语义清晰：信号 = 事件发生，无负载；配合 close(done) 广播语义（所有接收者同时收到）比「发 N 个值」省。bool 让人觉得「要读值」，容易误写成「读 false 当作没信号」。
 - 面试官追问：第 1 行 `done := make(chan struct{})` 未关闭、长期不读，泄漏吗？——不泄漏资源（零大小），但若有 goroutine 阻塞在 <-done 且永不关闭，是 goroutine 泄漏（A9）。
 
 ### D10. 场景题：10 个 worker 从 jobs channel 消费，主 goroutine 如何优雅停止全部 worker？
@@ -236,7 +236,7 @@
 
 ### E9. 信号量语义：`sem := make(chan struct{}, N)` 为什么是一种信号量？和 worker pool 区别？
 
-- 答案要点：能力面：chan 容量 N + 取 token（sem <- struct{}{}）+ 还 token（<-sem）即「最多 N 个并发」的计数信号量；天然阻塞与超时（select）。与 worker pool 区别：worker pool 是「固定 N 个执行者反复取任务」；信号量是「调用者自己跑，只是并发额度受限」——灵活（可限制任意临界区），但每处都要记得获取/释放成对。
+- 答案要点：能力面：chan 容量 N + 取 token（sem <- struct`{}``{}`）+ 还 token（<-sem）即「最多 N 个并发」的计数信号量；天然阻塞与超时（select）。与 worker pool 区别：worker pool 是「固定 N 个执行者反复取任务」；信号量是「调用者自己跑，只是并发额度受限」——灵活（可限制任意临界区），但每处都要记得获取/释放成对。
 - 面试官追问：信号量忘记了释放呢？——额度泄漏，最终全 block（活锁式卡死）；排查：goroutine 栈 + 计数器观测（呼应 A9/Observability）。
 
 ### E10. pipeline：多阶段处理的关闭顺序要遵守什么？
@@ -249,7 +249,7 @@
 ### F1. context 的传播规则：为什么「首参带 ctx」是硬规矩？
 
 - 答案要点：context 是可取消/可超时的「服务器请求元数据 + 取消信号」载体：函数链路上每层都要显式接受并向下传递（ctx 必须作为第一个参数，不存结构体字段——存字段会让取消范围失去边界）。传播的意义：一处超时/取消 → 整条链响应（DB/Kafka/HTTP 调用都支持 ctx）。坑：子 ctx 依赖父，父取消子必取消；反过来不行。
-- 面试官追问：WithValue 的 key 为什么要自定义类型而不是 string？——避免不同包撞 key（string 是全局字符串池）；标准做法 type key struct{} 或包级私有类型。
+- 面试官追问：WithValue 的 key 为什么要自定义类型而不是 string？——避免不同包撞 key（string 是全局字符串池）；标准做法 type key struct`{}` 或包级私有类型。
 
 ### F2. sync.Pool 的原理、适用场景、坑。
 
@@ -263,7 +263,7 @@
 
 ### F4. defer 的三个经典坑。
 
-- 答案要点：① 参数在 defer 语句处求值（值拷贝），不是函数运行时——defer fmt.Println(i) 在 i 变化后打印旧值；② 执行顺序 LIFO（后进先出），资源释放按逆序配对（锁/文件/连接）；③ 与命名返回值：defer 内可以改命名返回值（defer func(){ ret = ... }()），匿名返回值则改不了。性能：Go 1.14+ defer 在多数场景廉。
+- 答案要点：① 参数在 defer 语句处求值（值拷贝），不是函数运行时——defer fmt.Println(i) 在 i 变化后打印旧值；② 执行顺序 LIFO（后进先出），资源释放按逆序配对（锁/文件/连接）；③ 与命名返回值：defer 内可以改命名返回值（defer func()`{ ret = ... }`()），匿名返回值则改不了。性能：Go 1.14+ defer 在多数场景廉。
 - 面试官追问：for 循环里 defer 会怎样？——defer 挂在函数栈上，循环里 defer 全部累积到函数退出才执行 → 资源/内存堆积：把循环体抽成函数（每轮一个新函数栈）。
 
 ### F5. 线上 pprof 定位「内存只涨不降」的流程？
@@ -290,12 +290,12 @@
 
 ### G1. 两个 goroutine 交替打印 1-100：奇数 goroutine 打奇数、偶数 goroutine 打偶数。
 
-- 答案要点：思路：令牌传递（token passing）模拟「轮到你才打」：两个带缓冲容量 1 的 channel（或一个 chan struct{} 令牌 + 初始交给奇线程）；奇打 1 → 令牌交偶 → 偶打 2 → 令牌交奇……循环直到 100。要点：① 令牌 channel 容量 1 或初始放入令牌且只此一枚（防重复）；② 结束条件收敛（i > 100 时也把令牌传出去或 final sync 用 WaitGroup）；③ 这道题的隐藏考点是「锁+条件变量」写法对比：channel 版语义自解释、无死锁推导简单。
+- 答案要点：思路：令牌传递（token passing）模拟「轮到你才打」：两个带缓冲容量 1 的 channel（或一个 chan struct`{}` 令牌 + 初始交给奇线程）；奇打 1 → 令牌交偶 → 偶打 2 → 令牌交奇……循环直到 100。要点：① 令牌 channel 容量 1 或初始放入令牌且只此一枚（防重复）；② 结束条件收敛（i > 100 时也把令牌传出去或 final sync 用 WaitGroup）；③ 这道题的隐藏考点是「锁+条件变量」写法对比：channel 版语义自解释、无死锁推导简单。
 - 面试官追问：三个 goroutine 交替打 ABC 呢？——环状令牌：A → B → C → A 循环；N 个 goroutine = N 个一环传令牌，同上收敛（G2 直接复用）。
 
 ### G2. 三个 goroutine 循环打印 A、B、C（各 10 次）。
 
-- 答案要点：三通道环：chA<-start；循环 i 次 { 打印 -> chB <- 1 -> <-chA } 等外围（或用「谁收到令牌谁打印+传下一个」）：写作每个 goroutine { for { <-myCh; 打印; nextCh <- ok } }。坑：起始令牌只能一个（从 A 的通道开始发）否则重复；收尾要把令牌传完再退出（防死锁）。
+- 答案要点：三通道环：chA<-start；循环 i 次 `{ 打印 -> chB <- 1 -> <-chA }` 等外围（或用「谁收到令牌谁打印+传下一个」）：写作每个 goroutine { for `{ <-myCh; 打印; nextCh <- ok }` }。坑：起始令牌只能一个（从 A 的通道开始发）否则重复；收尾要把令牌传完再退出（防死锁）。
 - 面试官追问：不用 channel 只用原子计数器行吗？——行但弱：原子计数 + 自旋「如果不是我的回合就继续等」是忙等（吃 CPU）；channel 版是阻塞等待。面试加分答法：「选择哪个看对延迟/CPU 的约束」。
 
 ### G3. 设计并发安全 LRU：接口 Get(key) / Put(key, value)，O(1)，支持并发。
@@ -305,7 +305,7 @@
 
 ### G4. 综合题：实现限流下载器——同时最多 N 个下载、整体 qps 限速、任一下载失败怎么办？
 
-- 答案要点：拼装件（这是 E1/E2/E6 的合体）：① 并发上限 N：worker pool（jobs chan + N worker）或信号量 chan struct{};② 速率限制：rate.NewLimiter，worker 每次取任务前 Wait(1)（令牌桶整体控速）；③ 失败与取消：errgroup.WithContext——首个失败 cancel 其余（worker 在 select 里监听 ctx.Done() 提前退出），Wait 返回首个错误；④ 收尾：发送方 close(jobs) + WaitGroup 聚合。讲顺序：先并发骨架 → 再限速 → 再错误语义 → 再退出。
+- 答案要点：拼装件（这是 E1/E2/E6 的合体）：① 并发上限 N：worker pool（jobs chan + N worker）或信号量 chan struct`{}`;② 速率限制：rate.NewLimiter，worker 每次取任务前 Wait(1)（令牌桶整体控速）；③ 失败与取消：errgroup.WithContext——首个失败 cancel 其余（worker 在 select 里监听 ctx.Done() 提前退出），Wait 返回首个错误；④ 收尾：发送方 close(jobs) + WaitGroup 聚合。讲顺序：先并发骨架 → 再限速 → 再错误语义 → 再退出。
 - 面试官追问：重试逻辑放哪？——放「任务执行单元」：第 3 次失败才 error；但重试必须满足幂等（下载到一半重下 = 覆盖写入），呼应 E8 的幂等消费心智。
 
 ### G5. 多生产者多消费者 + 每条消息「至少处理一次且不重复」。

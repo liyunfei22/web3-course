@@ -37,3 +37,7 @@ target/
 *.log
 .idea/
 .vscode/
+
+# VitePress
+.vitepress/dist/
+.vitepress/cache/
